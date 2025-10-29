@@ -1,0 +1,223 @@
+basePath: /
+definitions:
+  echo.HTTPError:
+    properties:
+      message: {}
+    type: object
+  handlers.LenderSearchResult:
+    properties:
+      broker_comp_lp:
+        type: number
+      closing_costs:
+        description: 'TODO: need to figure out what data we need to get for this'
+        type: number
+      discount_pts:
+        description: |-
+          The amount of discount points that need to be paid by the borrower
+          initially to get the `Rate`
+        type: number
+      est_total_fees:
+        type: number
+      lender:
+        $ref: '#/definitions/ratesheets.Lender'
+      monthly_payment:
+        type: number
+      mortage_insurance_yearly_rate:
+        type: number
+      mortgage_insurance_per_month:
+        type: number
+      rate:
+        description: The rate that matches the criteria for this product
+        type: number
+      search_res:
+        $ref: '#/definitions/space.SearchResult'
+    required:
+    - broker_comp_lp
+    - closing_costs
+    - discount_pts
+    - est_total_fees
+    - lender
+    - monthly_payment
+    - mortage_insurance_yearly_rate
+    - mortgage_insurance_per_month
+    - rate
+    - search_res
+    type: object
+  handlers.SearchRequest:
+    properties:
+      criteria:
+        $ref: '#/definitions/space.Criteria'
+      lenders:
+        items:
+          $ref: '#/definitions/ratesheets.Lender'
+        minItems: 1
+        type: array
+      mock:
+        description: Specify if you want mock results
+        type: boolean
+    required:
+    - criteria
+    - lenders
+    type: object
+  ratesheets.Lender:
+    enum:
+    - maxex
+    type: string
+    x-enum-varnames:
+    - MaxEx
+  space.Criteria:
+    properties:
+      cltv:
+        description: combined ltv (all loans on property / property value) -- measures
+          everything
+        type: number
+      county:
+        type: string
+      credit_score:
+        type: number
+      dti:
+        description: debt to income (how much of borrower's income goes towards repayment)
+        type: number
+      fixed_loan_term_in_years:
+        type: integer
+      has_mortgage_insurance:
+        description: |-
+          Mortgage insurance (MI) — also called private mortgage insurance (PMI) on conventional loans — is a type of insurance that protects the lender, not the borrower.
+          It’s required when the borrower puts less than 20% down (so, LTV > 80%).
+          The borrower pays the premium (monthly, upfront, or both).
+        type: boolean
+      has_subordinate_financing:
+        description: |-
+          "Subordinate liens" and "subordinate financing" mean the same thing.
+          It just means the borrower has a second lien (like a HELOC or 2nd mortgage) behind the first mortgage.
+          The "subordinate" loan increases the combined leverage (CLTV).
+          Lenders sometimes charge LLPAs when a second lien exists because it increases risk.
+        type: boolean
+      income_verification_type:
+        type: string
+      income_verification_years:
+        type: integer
+      interest_only:
+        description: |-
+          A normal mortgage has two parts in each monthly payment:
+          Principal → the portion of your payment that reduces the amount you borrowed.
+          Interest → the portion that goes to the lender as the cost of borrowing.
+          Interest-Only (IO) loans let you skip paying down principal for a set period.
+        type: boolean
+      is_escrow_waived:
+        description: |-
+          Normally, lenders require an escrow account to pay property taxes and insurance automatically from your mortgage payment.
+          Escrow waiver means you don’t have to do that; you pay taxes/insurance yourself.
+          Usually comes with a price adjustment because it’s slightly riskier for the lender.
+        type: boolean
+      is_high_balance:
+        type: boolean
+      is_non_permanent_resident:
+        description: |-
+          A borrower who is not a U.S. citizen and does not have a permanent resident (green card).
+          Typically includes people on work visas, student visas, or other temporary residency statuses.
+          Lenders treat them differently because they may have limited credit history, employment restrictions, or residency-related risks.
+        type: boolean
+      is_rural:
+        type: boolean
+      is_self_employed:
+        type: boolean
+      loan_amount:
+        type: number
+      ltv:
+        description: loan to value (loan amount / property value) -- measures only
+          first mortgage
+        type: number
+      mortgage_type:
+        type: string
+      number_of_units:
+        type: integer
+      occupancy:
+        type: string
+      property:
+        type: string
+      property_attachment:
+        type: string
+      purpose:
+        type: string
+      rate_adjustment_in_months:
+        type: integer
+      reserves_in_months:
+        description: number of months of mortgage payments on hand
+        type: number
+      state:
+        type: string
+    type: object
+  space.LockPeriodToPrice:
+    additionalProperties:
+      $ref: '#/definitions/space.Price'
+    type: object
+  space.Price:
+    properties:
+      notEligible:
+        type: boolean
+      value:
+        format: float64
+        type: number
+    type: object
+  space.RateMatrix:
+    additionalProperties:
+      $ref: '#/definitions/space.LockPeriodToPrice'
+    type: object
+  space.SearchResult:
+    properties:
+      matrix:
+        $ref: '#/definitions/space.RateMatrix'
+      product_id:
+        description: The product name
+        type: string
+    required:
+    - matrix
+    - product_id
+    type: object
+host: localhost:1300
+info:
+  contact:
+    name: API Support
+  description: This is the core API.
+  termsOfService: http://swagger.io/terms/
+  title: Core API
+  version: "1.0"
+paths:
+  /api/search:
+    post:
+      description: Searches through rate sheets with the provided criteria.
+      parameters:
+      - description: Search parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SearchRequest'
+      responses:
+        "200":
+          description: Search results
+          schema:
+            items:
+              $ref: '#/definitions/handlers.LenderSearchResult'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/echo.HTTPError'
+      summary: Search through rate sheets with the provided criteria.
+      tags:
+      - search
+swagger: "2.0"
